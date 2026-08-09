@@ -12,7 +12,7 @@ import { validatePlannerForm } from '../utils/formValidation'
 
 const PlannerPage = () => {
   const navigate = useNavigate()
-  const { generateTrip } = useTrip()
+  const { setPendingTripData } = useTrip()
   const [step, setStep] = useState(1)
   const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
@@ -55,9 +55,8 @@ const PlannerPage = () => {
       return
     }
     try {
-      const trip = await generateTrip(form)
-      toast.success('Trip created successfully')
-      navigate(`/trip/${trip.id}`)
+      setPendingTripData(form)
+      navigate('/loading')
     } catch (error) {
       toast.error(error.message || 'Unable to create trip')
     }

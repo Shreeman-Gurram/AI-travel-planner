@@ -16,6 +16,7 @@ const request = async (endpoint, token, options = {}) => {
 }
 
 export const getTrips = (token) => request('', token)
+export const generateTrip = (preferences, token) => request('/generate', token, { method: 'POST', body: JSON.stringify(preferences) })
 export const getTripById = (id, token) => request(`/${id}`, token)
 export const createTrip = (trip, token) => request('', token, { method: 'POST', body: JSON.stringify(trip) })
 export const updateTrip = (id, trip, token) => request(`/${id}`, token, { method: 'PUT', body: JSON.stringify(trip) })

@@ -55,6 +55,10 @@ const TripDetailPage = () => {
         </div>
       </motion.section>
 
+      {trip.budgetPlan && <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900/70"><h2 className="text-xl font-semibold">Estimated Budget Plan</h2><div className="mt-4 grid gap-3 sm:grid-cols-3">{Object.entries(trip.budgetPlan).map(([name, value]) => <div key={name} className="rounded-2xl bg-slate-50 p-3 text-sm dark:bg-slate-800/70"><span className="capitalize">{name.replace(/([A-Z])/g, ' $1')}</span><strong className="ml-2">{trip.currency} {value}</strong></div>)}</div></section>}
+
+      {(trip.bestTime || trip.importantNotes?.length || trip.personalizedRecommendations?.length) && <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg dark:border-slate-800 dark:bg-slate-900/70"><h2 className="text-xl font-semibold">Personalized Notes</h2>{trip.bestTime && <p className="mt-3 text-sm">Best time: {trip.bestTime}</p>}<div className="mt-3 space-y-2">{[...(trip.importantNotes || []), ...(trip.personalizedRecommendations || [])].map((note, index) => <p key={`${note}-${index}`} className="text-sm text-slate-600 dark:text-slate-300">• {note}</p>)}</div></section>}
+
       <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-8">
           <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">
@@ -101,10 +105,11 @@ const TripDetailPage = () => {
           <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Day-wise Itinerary</h2>
             <div className="mt-4 space-y-4">
-              {itineraryTemplates.map((item) => (
+              {(trip.itinerary?.length ? trip.itinerary : itineraryTemplates).map((item) => (
                 <div key={item.day} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
                   <p className="text-sm font-semibold text-blue-600">Day {item.day}</p>
                   <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.title}</p>
+                  {item.activities?.map((activity, index) => <p key={`${activity.title}-${index}`} className="mt-2 text-sm text-slate-500 dark:text-slate-400">{activity.time} — {activity.title}: {activity.description}</p>)}
                 </div>
               ))}
             </div>
@@ -112,7 +117,7 @@ const TripDetailPage = () => {
           <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Packing Suggestions</h2>
             <div className="mt-4 flex flex-wrap gap-3">
-              {packingSuggestions.map((item) => <span key={item} className="rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600 dark:bg-blue-950/40">{item}</span>)}
+              {(trip.packingSuggestions?.length ? trip.packingSuggestions : packingSuggestions).map((item) => <span key={item} className="rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-blue-600 dark:bg-blue-950/40">{item}</span>)}
             </div>
           </section>
           <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">
@@ -124,7 +129,7 @@ const TripDetailPage = () => {
           <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Travel Tips</h2>
             <div className="mt-4 space-y-3">
-              {travelTips.map((tip) => <div key={tip} className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">{tip}</div>)}
+              {(trip.travelTips?.length ? trip.travelTips : travelTips).map((tip) => <div key={tip} className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">{tip}</div>)}
             </div>
           </section>
         </div>

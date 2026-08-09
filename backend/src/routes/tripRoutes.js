@@ -2,11 +2,12 @@ const express = require('express');
 const protect = require('../middleware/authMiddleware');
 const validateRequest = require('../middleware/validateRequest');
 const tripController = require('../controllers/tripController');
-const { createTripValidation, updateTripValidation, tripIdValidation } = require('../validators/tripValidators');
+const { createTripValidation, updateTripValidation, tripIdValidation, generateTripValidation } = require('../validators/tripValidators');
 
 const router = express.Router();
 
 router.use(protect);
+router.post('/generate', generateTripValidation, validateRequest, tripController.generateTrip);
 router.route('/')
   .post(createTripValidation, validateRequest, tripController.createTrip)
   .get(tripController.getTrips);

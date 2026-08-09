@@ -8,6 +8,9 @@ const createTrip = async (req, res, next) => {
     next(error);
   }
 };
+const generateTrip = async (req, res, next) => {
+  try { const trip = await tripService.generateUserTrip(req.user.id, req.body); res.status(201).json({ success: true, message: 'AI trip generated successfully', data: trip }); } catch (error) { next(error); }
+};
 
 const getTrips = async (req, res, next) => {
   try {
@@ -45,4 +48,4 @@ const deleteTrip = async (req, res, next) => {
   }
 };
 
-module.exports = { createTrip, getTrips, getTrip, updateTrip, deleteTrip };
+module.exports = { createTrip, generateTrip, getTrips, getTrip, updateTrip, deleteTrip };

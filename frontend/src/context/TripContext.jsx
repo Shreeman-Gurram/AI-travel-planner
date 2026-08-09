@@ -24,6 +24,7 @@ export const TripProvider = ({ children }) => {
   const [trips, setTrips] = useState([])
   const [activeTrip, setActiveTrip] = useState(null)
   const [isLoadingTrips, setIsLoadingTrips] = useState(false)
+  const [pendingTripData, setPendingTripData] = useState(null)
 
   const getToken = () => localStorage.getItem('travelToken')
 
@@ -58,27 +59,12 @@ export const TripProvider = ({ children }) => {
     const token = getToken()
     if (!token) throw new Error('Please log in before creating a trip')
 
-    const response = await tripApi.createTrip({
-      title: `${plannerData.destination} Escape`,
-      destinationName: plannerData.destination,
-      summary: plannerData.notes || '',
-      startDate: plannerData.startDate,
-      endDate: plannerData.endDate,
-      budget: Number(plannerData.budget),
-      currency: plannerData.currency,
-      travelers: Number(plannerData.travelers),
-      travelType: travelTypeMap[plannerData.travelType] || 'solo',
-      accommodation: plannerData.accommodation,
-      foodPreference: plannerData.foodPreference,
-      aiPrompt: plannerData.notes || '',
-      generatedFrom: 'manual',
-      itinerary: [],
-      hotelSuggestions: [],
-    }, token)
+    const response = await tripApi.generateTrip(plannerData, token)
 
     const newTrip = toClientTrip(response.data)
     setTrips((current) => [newTrip, ...current])
     setActiveTrip(newTrip)
+    setPendingTripData(null)
     return newTrip
   }
 
@@ -100,7 +86,7 @@ export const TripProvider = ({ children }) => {
   const savedTrips = trips
 
   const value = {
-    trips, activeTrip, savedTrips, isLoadingTrips, setActiveTrip, saveTrip, deleteTrip, toggleFavorite, generateTrip, loadTrips,
+    trips, activeTrip, savedTrips, isLoadingTrips, pendingTripData, setPendingTripData, setActiveTrip, saveTrip, deleteTrip, toggleFavorite, generateTrip, loadTrips,
   }
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>

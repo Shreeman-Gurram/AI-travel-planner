@@ -67,5 +67,20 @@ const tripValidationRules = (isCreate) => [
 const createTripValidation = tripValidationRules(true);
 const updateTripValidation = tripValidationRules(false);
 const tripIdValidation = [param('id').isMongoId().withMessage('Trip ID must be a valid MongoDB ObjectId')];
+const generateTripValidation = [
+  body('destination').trim().notEmpty().withMessage('Destination is required').bail().isLength({ max: 200 }),
+  body('startDate').isISO8601().toDate().withMessage('Start date must be a valid ISO date'),
+  body('endDate').isISO8601().toDate().withMessage('End date must be a valid ISO date'),
+  body('budget').isFloat({ min: 0 }).toFloat().withMessage('Budget cannot be negative'),
+  body('currency').isString().trim().isLength({ min: 3, max: 3 }).toUpperCase(),
+  body('travelers').isInt({ min: 1 }).toInt().withMessage('Travelers must be at least 1'),
+  body('travelType').isString().trim().notEmpty().withMessage('Travel type is required'),
+  body('interests').optional().isString().trim().isLength({ max: 500 }),
+  body('transportation').optional().isString().trim().isLength({ max: 100 }),
+  body('accommodation').optional().isString().trim().isLength({ max: 100 }),
+  body('foodPreference').optional().isString().trim().isLength({ max: 100 }),
+  body('notes').optional().isString().trim().isLength({ max: 2000 }),
+  body().custom((_, { req }) => { if (new Date(req.body.endDate) < new Date(req.body.startDate)) throw new Error('End date must be on or after start date'); return true; }),
+];
 
-module.exports = { createTripValidation, updateTripValidation, tripIdValidation, tripFields };
+module.exports = { createTripValidation, updateTripValidation, tripIdValidation, generateTripValidation, tripFields };

@@ -1,16 +1,24 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
+import { useTrip } from '../context/TripContext'
 
-const steps = ['Generating itinerary...', 'Finding hotels...', 'Checking weather...', 'Finding restaurants...', 'Preparing budget...', 'Almost done...']
+const steps = ['Planning your itinerary...', 'Personalizing activities...', 'Preparing your budget...', 'Creating travel tips...', 'Finalizing your trip...']
 
 const LoadingPage = () => {
   const navigate = useNavigate()
+  const { pendingTripData, generateTrip } = useTrip()
+  const started = useRef(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate('/trip/trip-1'), 3000)
-    return () => clearTimeout(timer)
-  }, [navigate])
+    if (!pendingTripData) { navigate('/planner', { replace: true }); return undefined }
+    if (started.current) return undefined
+    started.current = true
+    let active = true
+    generateTrip(pendingTripData).then((trip) => { if (active) navigate(`/trip/${trip.id}`, { replace: true }) }).catch((error) => { if (active) { toast.error(error.message || 'Unable to generate trip'); navigate('/planner', { replace: true }) } })
+    return () => { active = false }
+  }, [generateTrip, navigate, pendingTripData])
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center px-4">

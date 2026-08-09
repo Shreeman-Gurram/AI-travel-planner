@@ -1,5 +1,6 @@
 const Trip = require('../models/Trip');
 const { tripFields } = require('../validators/tripValidators');
+const { generateTravelPlan } = require('./geminiService');
 
 const createError = (message, statusCode) => Object.assign(new Error(message), { statusCode });
 
@@ -8,6 +9,19 @@ const pickTripFields = (data) => Object.fromEntries(
 );
 
 const createTrip = async (userId, data) => Trip.create({ ...pickTripFields(data), userId });
+
+const travelTypeMap = { Relaxing: 'solo', Adventure: 'adventure', Cultural: 'friends', Romantic: 'couple', Family: 'family', Foodie: 'friends' };
+const generateUserTrip = async (userId, data) => {
+  const plan = await generateTravelPlan(data);
+  return Trip.create({
+    userId, destinationName: data.destination, title: plan.tripSummary.title, summary: plan.tripSummary.description,
+    startDate: data.startDate, endDate: data.endDate, budget: data.budget, currency: data.currency, travelers: data.travelers,
+    travelType: travelTypeMap[data.travelType] || 'solo', accommodation: data.accommodation || 'hotel', foodPreference: data.foodPreference || 'local cuisine',
+    transportationPreference: data.transportation || '', interests: (data.interests || '').split(',').map((item) => item.trim()).filter(Boolean), aiPrompt: data.notes || '', generatedFrom: 'ai',
+    itinerary: plan.itinerary, budgetPlan: plan.budgetPlan, travelTips: plan.travelTips, packingSuggestions: plan.packingSuggestions, bestTime: plan.bestTime,
+    importantNotes: plan.importantNotes, personalizedRecommendations: plan.personalizedRecommendations,
+  });
+};
 
 const getUserTrips = async (userId) => Trip.find({ userId }).sort({ createdAt: -1 });
 
@@ -35,4 +49,4 @@ const deleteUserTrip = async (userId, tripId) => {
   if (!trip) throw createError('Trip not found', 404);
 };
 
-module.exports = { createTrip, getUserTrips, getUserTrip, updateUserTrip, deleteUserTrip };
+module.exports = { createTrip, generateUserTrip, getUserTrips, getUserTrip, updateUserTrip, deleteUserTrip };
