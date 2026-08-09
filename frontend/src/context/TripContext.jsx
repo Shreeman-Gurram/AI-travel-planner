@@ -1,52 +1,107 @@
-import { createContext, useContext, useMemo, useState } from 'react'
-import { mockTrips } from '../data/mockData'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { useAuth } from './AuthContext'
+import * as tripApi from '../services/tripService'
 
 const TripContext = createContext(null)
 
+const travelTypeMap = {
+  Relaxing: 'solo', Adventure: 'adventure', Cultural: 'friends', Romantic: 'couple', Family: 'family', Foodie: 'friends',
+}
+
+const toClientTrip = (trip) => ({
+  ...trip,
+  id: trip._id,
+  destination: trip.destinationName || 'Unknown destination',
+  type: trip.travelType,
+  favorite: trip.isPublic,
+  image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80',
+  startDate: trip.startDate ? new Date(trip.startDate).toISOString().slice(0, 10) : '',
+  endDate: trip.endDate ? new Date(trip.endDate).toISOString().slice(0, 10) : '',
+})
+
 export const TripProvider = ({ children }) => {
-  const [trips, setTrips] = useState(mockTrips)
-  const [activeTrip, setActiveTrip] = useState(mockTrips[0])
-  const [savedTrips, setSavedTrips] = useState(mockTrips.slice(0, 3))
+  const { isAuthenticated } = useAuth()
+  const [trips, setTrips] = useState([])
+  const [activeTrip, setActiveTrip] = useState(null)
+  const [isLoadingTrips, setIsLoadingTrips] = useState(false)
 
-  const saveTrip = (trip) => {
-    setSavedTrips((current) => (current.some((item) => item.id === trip.id) ? current : [trip, ...current]))
-  }
+  const getToken = () => localStorage.getItem('travelToken')
 
-  const deleteTrip = (tripId) => {
-    setSavedTrips((current) => current.filter((trip) => trip.id !== tripId))
-  }
-
-  const toggleFavorite = (tripId) => {
-    setSavedTrips((current) =>
-      current.map((trip) => (trip.id === tripId ? { ...trip, favorite: !trip.favorite } : trip))
-    )
-  }
-
-  const generateTrip = (plannerData) => {
-    const newTrip = {
-      id: Date.now().toString(),
-      title: `${plannerData.destination} Escape`,
-      destination: plannerData.destination,
-      image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80',
-      budget: plannerData.budget,
-      travelers: plannerData.travelers,
-      startDate: plannerData.startDate,
-      endDate: plannerData.endDate,
-      type: plannerData.travelType,
-      favorite: false,
-      aiPowered: true,
-      summary: 'A hand-crafted itinerary featuring local dining, curated experiences, and a balanced budget.',
+  const loadTrips = useCallback(async () => {
+    const token = getToken()
+    if (!token) {
+      setTrips([])
+      return []
     }
 
+    setIsLoadingTrips(true)
+    try {
+      const response = await tripApi.getTrips(token)
+      const loadedTrips = response.data.map(toClientTrip)
+      setTrips(loadedTrips)
+      return loadedTrips
+    } finally {
+      setIsLoadingTrips(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isAuthenticated) loadTrips().catch(() => setTrips([]))
+      else setTrips([])
+    }, 0)
+
+    return () => clearTimeout(timer)
+  }, [isAuthenticated, loadTrips])
+
+  const generateTrip = async (plannerData) => {
+    const token = getToken()
+    if (!token) throw new Error('Please log in before creating a trip')
+
+    const response = await tripApi.createTrip({
+      title: `${plannerData.destination} Escape`,
+      destinationName: plannerData.destination,
+      summary: plannerData.notes || '',
+      startDate: plannerData.startDate,
+      endDate: plannerData.endDate,
+      budget: Number(plannerData.budget),
+      currency: plannerData.currency,
+      travelers: Number(plannerData.travelers),
+      travelType: travelTypeMap[plannerData.travelType] || 'solo',
+      accommodation: plannerData.accommodation,
+      foodPreference: plannerData.foodPreference,
+      aiPrompt: plannerData.notes || '',
+      generatedFrom: 'manual',
+      itinerary: [],
+      hotelSuggestions: [],
+    }, token)
+
+    const newTrip = toClientTrip(response.data)
     setTrips((current) => [newTrip, ...current])
     setActiveTrip(newTrip)
     return newTrip
   }
 
-  const value = useMemo(
-    () => ({ trips, activeTrip, savedTrips, setActiveTrip, saveTrip, deleteTrip, toggleFavorite, generateTrip }),
-    [trips, activeTrip, savedTrips]
-  )
+  const deleteTrip = async (tripId) => {
+    await tripApi.deleteTrip(tripId, getToken())
+    setTrips((current) => current.filter((trip) => trip.id !== tripId))
+    setActiveTrip((current) => (current?.id === tripId ? null : current))
+  }
+
+  const toggleFavorite = async (tripId) => {
+    const currentTrip = trips.find((trip) => trip.id === tripId)
+    if (!currentTrip) return
+    const response = await tripApi.updateTrip(tripId, { isPublic: !currentTrip.favorite }, getToken())
+    const updatedTrip = toClientTrip(response.data)
+    setTrips((current) => current.map((trip) => (trip.id === tripId ? updatedTrip : trip)))
+  }
+
+  const saveTrip = (trip) => setActiveTrip(trip)
+  const savedTrips = trips
+
+  const value = {
+    trips, activeTrip, savedTrips, isLoadingTrips, setActiveTrip, saveTrip, deleteTrip, toggleFavorite, generateTrip, loadTrips,
+  }
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>
 }

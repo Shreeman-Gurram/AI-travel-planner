@@ -11,7 +11,6 @@ const tripSchema = new mongoose.Schema(
     destinationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Destination',
-      required: [true, 'Destination reference is required'],
       index: true,
     },
     destinationName: {

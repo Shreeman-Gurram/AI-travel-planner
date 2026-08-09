@@ -13,6 +13,10 @@ const TripDetailPage = () => {
   const { trips, saveTrip, savedTrips } = useTrip()
   const trip = useMemo(() => trips.find((item) => item.id === id) || trips[0], [id, trips])
 
+  if (!trip) {
+    return <div className="p-8 text-center text-slate-600 dark:text-slate-300">Loading trip details...</div>
+  }
+
   return (
     <div className="space-y-8">
       <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-[32px] border border-slate-200/70 bg-white/80 shadow-[0_30px_80px_-20px_rgba(15,23,42,0.25)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">

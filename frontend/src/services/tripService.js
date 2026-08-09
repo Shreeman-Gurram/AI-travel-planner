@@ -1,13 +1,22 @@
-import { mockTrips, itineraryTemplates, budgetBreakdown } from '../data/mockData'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
-export const getTrips = () =>
-  Promise.resolve(mockTrips)
+const request = async (endpoint, token, options = {}) => {
+  const response = await fetch(`${API_BASE_URL}/trips${endpoint}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
+    },
+    ...options,
+  })
 
-export const getTripById = (id) =>
-  Promise.resolve(mockTrips.find((trip) => trip.id === id) || mockTrips[0])
+  const data = await response.json()
+  if (!response.ok) throw new Error(data.message || 'Trip request failed')
+  return data
+}
 
-export const getItinerary = () =>
-  Promise.resolve(itineraryTemplates)
-
-export const getBudgetBreakdown = () =>
-  Promise.resolve(budgetBreakdown)
+export const getTrips = (token) => request('', token)
+export const getTripById = (id, token) => request(`/${id}`, token)
+export const createTrip = (trip, token) => request('', token, { method: 'POST', body: JSON.stringify(trip) })
+export const updateTrip = (id, trip, token) => request(`/${id}`, token, { method: 'PUT', body: JSON.stringify(trip) })
+export const deleteTrip = (id, token) => request(`/${id}`, token, { method: 'DELETE' })

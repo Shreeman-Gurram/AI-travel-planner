@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { useTrip } from '../context/TripContext'
 import { Input } from '../components/ui/Input'
 import { TripCard } from '../components/ui/TripCard'
@@ -31,7 +32,7 @@ const SavedTripsPage = () => {
             <TripCard trip={trip} onFavorite={toggleFavorite} onView={() => {}} />
             <div className="flex gap-3">
               <Link to={`/trip/${trip.id}`} className="flex-1 rounded-2xl bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white">View</Link>
-              <button onClick={() => deleteTrip(trip.id)} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">Delete</button>
+              <button onClick={() => deleteTrip(trip.id).catch((error) => toast.error(error.message || 'Unable to delete trip'))} className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">Delete</button>
             </div>
           </div>
         ))}

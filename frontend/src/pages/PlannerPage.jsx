@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { useTrip } from '../context/TripContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -27,10 +28,15 @@ const PlannerPage = () => {
     notes: 'Prefer scenic views and relaxed pacing.'
   })
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    generateTrip(form)
-    navigate('/loading')
+    try {
+      const trip = await generateTrip(form)
+      toast.success('Trip created successfully')
+      navigate(`/trip/${trip.id}`)
+    } catch (error) {
+      toast.error(error.message || 'Unable to create trip')
+    }
   }
 
   return (
