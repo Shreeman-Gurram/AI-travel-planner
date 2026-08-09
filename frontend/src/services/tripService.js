@@ -1,3 +1,5 @@
+import { parseApiResponse } from './apiError'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
 const request = async (endpoint, token, options = {}) => {
@@ -10,9 +12,7 @@ const request = async (endpoint, token, options = {}) => {
     ...options,
   })
 
-  const data = await response.json()
-  if (!response.ok) throw new Error(data.message || 'Trip request failed')
-  return data
+  return parseApiResponse(response, 'Trip request failed')
 }
 
 export const getTrips = (token) => request('', token)

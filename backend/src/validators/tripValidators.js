@@ -30,7 +30,9 @@ const optionalString = (field, max) => body(field).optional().isString().trim().
 
 const tripValidationRules = (isCreate) => [
   body('destinationId').optional({ values: 'falsy' }).isMongoId().withMessage('Destination ID must be a valid MongoDB ObjectId'),
-  optionalString('destinationName', 200),
+  isCreate
+    ? body('destinationName').trim().notEmpty().withMessage('Destination is required').bail().isLength({ max: 200 }).withMessage('Destination cannot exceed 200 characters')
+    : body('destinationName').optional().trim().notEmpty().withMessage('Destination cannot be empty').bail().isLength({ max: 200 }).withMessage('Destination cannot exceed 200 characters'),
   isCreate
     ? body('title').trim().isLength({ min: 3, max: 150 }).withMessage('Trip title must be between 3 and 150 characters')
     : body('title').optional().trim().isLength({ min: 3, max: 150 }).withMessage('Trip title must be between 3 and 150 characters'),

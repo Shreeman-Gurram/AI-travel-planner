@@ -1,20 +1,42 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { FaGoogle, FaFacebook, FaGithub } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { getApiFieldErrors, validateLoginForm } from '../utils/formValidation'
 
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, continueAsGuest } = useAuth()
   const [form, setForm] = useState({ email: '', password: '' })
+  const [errors, setErrors] = useState({})
+  const [formError, setFormError] = useState('')
 
-  const handleSubmit = (event) => {
+  const updateField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }))
+    setErrors((current) => ({ ...current, [field]: '' }))
+    setFormError('')
+  }
+
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    login(form)
-    navigate('/dashboard')
+    const validationErrors = validateLoginForm(form)
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors)
+      return
+    }
+
+    try {
+      await login(form)
+      navigate('/dashboard')
+    } catch (error) {
+      setErrors(getApiFieldErrors(error))
+      setFormError(error.message || 'Unable to log in')
+      toast.error(error.message || 'Unable to log in')
+    }
   }
 
   return (
@@ -27,9 +49,10 @@ const LoginPage = () => {
             <p className="mt-4 text-blue-50">Search destinations, manage saved itineraries, and keep every plan beautifully organized.</p>
           </div>
           <div className="p-8 sm:p-10">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input label="Email" type="email" placeholder="you@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              <Input label="Password" type="password" placeholder="••••••••" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+              {formError && <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">{formError}</p>}
+              <Input label="Email" type="email" placeholder="you@example.com" value={form.email} error={errors.email} onChange={(e) => updateField('email', e.target.value)} />
+              <Input label="Password" type="password" placeholder="Password" value={form.password} error={errors.password} onChange={(e) => updateField('password', e.target.value)} />
               <div className="flex items-center justify-between text-sm text-slate-500">
                 <label className="flex items-center gap-2"><input type="checkbox" /> Remember me</label>
                 <a href="#" className="text-blue-600">Forgot password?</a>

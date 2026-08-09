@@ -15,8 +15,10 @@ const tripSchema = new mongoose.Schema(
     },
     destinationName: {
       type: String,
+      required: [true, 'Destination is required'],
       trim: true,
-      default: '',
+      minlength: [2, 'Destination must be at least 2 characters'],
+      maxlength: [200, 'Destination cannot exceed 200 characters'],
     },
     title: {
       type: String,
@@ -133,5 +135,11 @@ const tripSchema = new mongoose.Schema(
 tripSchema.index({ userId: 1, status: 1, startDate: 1 });
 tripSchema.index({ destinationId: 1, status: 1 });
 tripSchema.index({ isPublic: 1, createdAt: -1 });
+
+tripSchema.pre('validate', function validateTripDates() {
+  if (this.startDate && this.endDate && this.endDate < this.startDate) {
+    this.invalidate('endDate', 'End date must be on or after start date');
+  }
+});
 
 module.exports = mongoose.model('Trip', tripSchema);

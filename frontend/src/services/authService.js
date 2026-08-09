@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:5000/api/auth'
+import { parseApiResponse } from './apiError'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/auth` : 'http://localhost:5000/api/auth'
 
 const request = async (endpoint, options = {}) => {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -9,13 +11,7 @@ const request = async (endpoint, options = {}) => {
     ...options,
   })
 
-  const data = await response.json()
-
-  if (!response.ok) {
-    throw new Error(data.message || 'Request failed')
-  }
-
-  return data
+  return parseApiResponse(response)
 }
 
 export const loginUser = (credentials) =>

@@ -8,11 +8,13 @@ import { Input } from '../components/ui/Input'
 import { Dropdown } from '../components/ui/Dropdown'
 import { Textarea } from '../components/ui/Textarea'
 import { currencies, transportationOptions, accommodationOptions, foodPreferences, travelTypes } from '../constants'
+import { validatePlannerForm } from '../utils/formValidation'
 
 const PlannerPage = () => {
   const navigate = useNavigate()
   const { generateTrip } = useTrip()
   const [step, setStep] = useState(1)
+  const [errors, setErrors] = useState({})
   const [form, setForm] = useState({
     destination: 'Santorini',
     startDate: '2026-08-18',
@@ -28,8 +30,30 @@ const PlannerPage = () => {
     notes: 'Prefer scenic views and relaxed pacing.'
   })
 
+  const updateField = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }))
+    setErrors((current) => ({ ...current, [field]: '' }))
+  }
+
+  const handleNext = () => {
+    const validationErrors = validatePlannerForm(form)
+    const fields = step === 1 ? ['destination', 'startDate', 'endDate', 'budget'] : ['travelers', 'interests']
+    const stepErrors = Object.fromEntries(Object.entries(validationErrors).filter(([field]) => fields.includes(field)))
+    if (Object.keys(stepErrors).length) {
+      setErrors(stepErrors)
+      return
+    }
+    setStep((current) => Math.min(3, current + 1))
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
+    const validationErrors = validatePlannerForm(form)
+    if (Object.keys(validationErrors).length) {
+      setErrors(validationErrors)
+      setStep(['destination', 'startDate', 'endDate', 'budget'].some((field) => validationErrors[field]) ? 1 : 2)
+      return
+    }
     try {
       const trip = await generateTrip(form)
       toast.success('Trip created successfully')
@@ -55,32 +79,32 @@ const PlannerPage = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {step === 1 && (
             <div className="grid gap-6 md:grid-cols-2">
-              <Input label="Destination" value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} />
-              <Input label="Start Date" type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
-              <Input label="End Date" type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
-              <Input label="Budget" type="number" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} />
+              <Input label="Destination" value={form.destination} error={errors.destination} onChange={(e) => updateField('destination', e.target.value)} />
+              <Input label="Start Date" type="date" value={form.startDate} error={errors.startDate} onChange={(e) => updateField('startDate', e.target.value)} />
+              <Input label="End Date" type="date" value={form.endDate} error={errors.endDate} onChange={(e) => updateField('endDate', e.target.value)} />
+              <Input label="Budget" type="number" min="0" value={form.budget} error={errors.budget} onChange={(e) => updateField('budget', e.target.value)} />
             </div>
           )}
           {step === 2 && (
             <div className="grid gap-6 md:grid-cols-2">
-              <Dropdown label="Currency" options={currencies} value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} />
-              <Input label="Number of Travelers" type="number" value={form.travelers} onChange={(e) => setForm({ ...form, travelers: e.target.value })} />
-              <Dropdown label="Travel Type" options={travelTypes} value={form.travelType} onChange={(e) => setForm({ ...form, travelType: e.target.value })} />
-              <Input label="Interests" value={form.interests} onChange={(e) => setForm({ ...form, interests: e.target.value })} />
+              <Dropdown label="Currency" options={currencies} value={form.currency} onChange={(e) => updateField('currency', e.target.value)} />
+              <Input label="Number of Travelers" type="number" min="1" value={form.travelers} error={errors.travelers} onChange={(e) => updateField('travelers', e.target.value)} />
+              <Dropdown label="Travel Type" options={travelTypes} value={form.travelType} onChange={(e) => updateField('travelType', e.target.value)} />
+              <Input label="Interests" value={form.interests} error={errors.interests} onChange={(e) => updateField('interests', e.target.value)} />
             </div>
           )}
           {step === 3 && (
             <div className="grid gap-6 md:grid-cols-2">
-              <Dropdown label="Transportation Preference" options={transportationOptions} value={form.transportation} onChange={(e) => setForm({ ...form, transportation: e.target.value })} />
-              <Dropdown label="Accommodation Preference" options={accommodationOptions} value={form.accommodation} onChange={(e) => setForm({ ...form, accommodation: e.target.value })} />
-              <Dropdown label="Food Preference" options={foodPreferences} value={form.foodPreference} onChange={(e) => setForm({ ...form, foodPreference: e.target.value })} />
-              <Textarea label="Special Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <Dropdown label="Transportation Preference" options={transportationOptions} value={form.transportation} onChange={(e) => updateField('transportation', e.target.value)} />
+              <Dropdown label="Accommodation Preference" options={accommodationOptions} value={form.accommodation} onChange={(e) => updateField('accommodation', e.target.value)} />
+              <Dropdown label="Food Preference" options={foodPreferences} value={form.foodPreference} onChange={(e) => updateField('foodPreference', e.target.value)} />
+              <Textarea label="Special Notes" value={form.notes} onChange={(e) => updateField('notes', e.target.value)} />
             </div>
           )}
           <div className="flex flex-wrap justify-between gap-3 border-t border-slate-200 pt-6 dark:border-slate-700">
             <Button type="button" variant="secondary" onClick={() => setStep((current) => Math.max(1, current - 1))}>Back</Button>
             {step < 3 ? (
-              <Button type="button" onClick={() => setStep((current) => Math.min(3, current + 1))}>Next</Button>
+              <Button type="button" onClick={handleNext}>Next</Button>
             ) : (
               <Button type="submit">Generate Trip</Button>
             )}
