@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useTrip } from '../context/TripContext'
 
-const steps = ['Planning your itinerary...', 'Personalizing activities...', 'Preparing your budget...', 'Creating travel tips...', 'Finalizing your trip...']
+const steps = ['Planning your itinerary...', 'Personalizing activities...', 'Checking weather forecast...', 'Preparing your budget...', 'Creating travel tips...', 'Finalizing your trip...']
 
 const LoadingPage = () => {
   const navigate = useNavigate()
@@ -29,7 +29,7 @@ const LoadingPage = () => {
           {steps.map((step, index) => (
             <div key={step} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">
               <span>{step}</span>
-              <span className="text-blue-500">{index < 3 ? '●' : '○'}</span>
+              <span className="text-blue-500">{index < 4 ? '●' : '○'}</span>
             </div>
           ))}
         </div>

@@ -1,6 +1,7 @@
 const Trip = require('../models/Trip');
 const { tripFields } = require('../validators/tripValidators');
 const { generateTravelPlan } = require('./geminiService');
+const { getWeatherForTrip } = require('./weatherService');
 
 const createError = (message, statusCode) => Object.assign(new Error(message), { statusCode });
 
@@ -13,6 +14,17 @@ const createTrip = async (userId, data) => Trip.create({ ...pickTripFields(data)
 const travelTypeMap = { Relaxing: 'solo', Adventure: 'adventure', Cultural: 'friends', Romantic: 'couple', Family: 'family', Foodie: 'friends' };
 const generateUserTrip = async (userId, data) => {
   const plan = await generateTravelPlan(data);
+  
+  // Fetch weather data for the trip destination and dates
+  let weather = {};
+  try {
+    weather = await getWeatherForTrip(data.destination, data.startDate, data.endDate);
+  } catch (weatherError) {
+    // Log weather error but don't fail trip generation
+    console.warn('[WEATHER_WARNING]', weatherError.message);
+    // Continue with empty weather object - trip generation succeeds even if weather fails
+  }
+
   return Trip.create({
     userId, destinationName: data.destination, title: plan.tripSummary.title, summary: plan.tripSummary.description,
     startDate: data.startDate, endDate: data.endDate, budget: data.budget, currency: data.currency, travelers: data.travelers,
@@ -20,6 +32,7 @@ const generateUserTrip = async (userId, data) => {
     transportationPreference: data.transportation || '', interests: (data.interests || '').split(',').map((item) => item.trim()).filter(Boolean), aiPrompt: data.notes || '', generatedFrom: 'ai',
     itinerary: plan.itinerary, budgetPlan: plan.budgetPlan, travelTips: plan.travelTips, packingSuggestions: plan.packingSuggestions, bestTime: plan.bestTime,
     importantNotes: plan.importantNotes, personalizedRecommendations: plan.personalizedRecommendations,
+    weather: weather || {},
   });
 };
 

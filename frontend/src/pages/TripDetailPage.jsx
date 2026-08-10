@@ -6,7 +6,7 @@ import { useTrip } from '../context/TripContext'
 import { Button } from '../components/ui/Button'
 import { MapPlaceholder } from '../components/ui/MapPlaceholder'
 import { WeatherCard } from '../components/ui/WeatherCard'
-import { hotels, restaurants, itineraryTemplates, emergencyContacts, packingSuggestions, travelTips, weatherSnapshots } from '../data/mockData'
+import { hotels, restaurants, itineraryTemplates, emergencyContacts, packingSuggestions, travelTips } from '../data/mockData'
 
 const TripDetailPage = () => {
   const { id } = useParams()
@@ -63,7 +63,7 @@ const TripDetailPage = () => {
         <div className="space-y-8">
           <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Weather</h2>
-            <div className="mt-4"><WeatherCard weather={weatherSnapshots[0]} /></div>
+            <div className="mt-4"><WeatherCard weather={trip.weather} /></div>
           </section>
           <section className="rounded-[32px] border border-slate-200/70 bg-white/80 p-6 shadow-lg backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">
             <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50">Hotels</h2>
