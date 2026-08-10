@@ -18,13 +18,18 @@ const generateUserTrip = async (userId, data) => {
   // Fetch weather data for the trip destination and dates
   let weather = {};
   try {
+    console.log('[WEATHER] Fetching weather for:', data.destination, 'Dates:', data.startDate, 'to', data.endDate);
     weather = await getWeatherForTrip(data.destination, data.startDate, data.endDate);
+    console.log('[WEATHER] Success! Got weather for:', weather.location);
   } catch (weatherError) {
     // Log weather error but don't fail trip generation
-    console.warn('[WEATHER_WARNING]', weatherError.message);
+    console.error('[WEATHER_ERROR]', weatherError.message);
+    console.error('[WEATHER_ERROR] Stack:', weatherError.stack);
     // Continue with empty weather object - trip generation succeeds even if weather fails
   }
 
+  console.log('[TRIP] Creating trip with weather:', weather);
+  
   return Trip.create({
     userId, destinationName: data.destination, title: plan.tripSummary.title, summary: plan.tripSummary.description,
     startDate: data.startDate, endDate: data.endDate, budget: data.budget, currency: data.currency, travelers: data.travelers,

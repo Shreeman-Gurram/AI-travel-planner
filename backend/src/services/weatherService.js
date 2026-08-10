@@ -4,12 +4,59 @@
  * No API key required for free tier
  */
 
+const https = require('https');
 const { getWeatherInfo } = require('../utils/weatherCodeMap');
 
-const GEOCODING_API = 'https://geocoding-api.open-meteo.com/v1/search';
-const FORECAST_API = 'https://api.open-meteo.com/v1/forecast';
+const GEOCODING_API = 'geocoding-api.open-meteo.com';
+const FORECAST_API = 'api.open-meteo.com';
 
 const createError = (message, statusCode) => Object.assign(new Error(message), { statusCode });
+
+/**
+ * Utility function to make HTTPS requests
+ */
+const httpsGet = (hostname, path) => {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname,
+      path,
+      method: 'GET',
+      timeout: 10000,
+    };
+
+    const request = https.request(options, (response) => {
+      let data = '';
+      
+      if (response.statusCode !== 200) {
+        reject(createError(`API returned status ${response.statusCode}`, response.statusCode));
+        return;
+      }
+
+      response.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      response.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(createError('Invalid JSON response', 502));
+        }
+      });
+    });
+
+    request.on('error', (error) => {
+      reject(createError(error.message, 503));
+    });
+
+    request.on('timeout', () => {
+      request.destroy();
+      reject(createError('Request timed out', 504));
+    });
+
+    request.end();
+  });
+};
 
 /**
  * Geocode destination to latitude, longitude, and timezone
@@ -21,27 +68,22 @@ const geocodeDestination = async (destination) => {
     throw createError('Invalid destination provided', 400);
   }
 
+  console.log('[GEOCODING] Geocoding destination:', destination);
+
   try {
-    const response = await Promise.race([
-      fetch(
-        `${GEOCODING_API}?name=${encodeURIComponent(destination)}&count=1&language=en&format=json`
-      ),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(createError('Geocoding request timed out', 504)), 10000)
-      ),
-    ]);
-
-    if (!response.ok) {
-      throw createError('Geocoding service unavailable', 503);
-    }
-
-    const data = await response.json();
+    const encodedDestination = encodeURIComponent(destination);
+    const path = `/v1/search?name=${encodedDestination}&count=1&language=en&format=json`;
+    
+    const data = await httpsGet(GEOCODING_API, path);
 
     if (!data.results || data.results.length === 0) {
+      console.warn('[GEOCODING] No results for:', destination);
       throw createError(`Destination "${destination}" not found. Please check the spelling and try again.`, 404);
     }
 
     const result = data.results[0];
+    
+    console.log('[GEOCODING] Success! Found:', result.name, 'at', result.latitude, result.longitude);
 
     return {
       name: result.name,
@@ -53,6 +95,7 @@ const geocodeDestination = async (destination) => {
     };
   } catch (error) {
     if (error.statusCode) throw error;
+    console.error('[GEOCODING] Error:', error.message);
     throw createError('Unable to find destination. Please try again.', 503);
   }
 };
@@ -61,14 +104,18 @@ const geocodeDestination = async (destination) => {
  * Get weather forecast for given coordinates and date range
  * @param {number} latitude
  * @param {number} longitude
- * @param {Date} startDate
- * @param {Date} endDate
+ * @param {Date|string} startDate
+ * @param {Date|string} endDate
  * @param {string} timezone
  * @returns {Promise} - Forecast array
  */
 const getWeatherForecast = async (latitude, longitude, startDate, endDate, timezone) => {
+  // Ensure dates are Date objects
   const start = new Date(startDate);
   const end = new Date(endDate);
+
+  console.log('[FORECAST] Fetching forecast for coords:', latitude, longitude);
+  console.log('[FORECAST] Date range:', start.toISOString(), 'to', end.toISOString());
 
   // Open-Meteo free tier supports up to 16 days of forecast
   const maxDays = 16;
@@ -84,23 +131,16 @@ const getWeatherForecast = async (latitude, longitude, startDate, endDate, timez
   const startDateStr = start.toISOString().split('T')[0];
   const endDateStr = end.toISOString().split('T')[0];
 
+  console.log('[FORECAST] API call with dates:', startDateStr, 'to', endDateStr);
+
   try {
-    const response = await Promise.race([
-      fetch(
-        `${FORECAST_API}?latitude=${latitude}&longitude=${longitude}&start_date=${startDateStr}&end_date=${endDateStr}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max&temperature_unit=celsius&wind_speed_unit=kmh&timezone=${encodeURIComponent(timezone)}`
-      ),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(createError('Forecast request timed out', 504)), 10000)
-      ),
-    ]);
-
-    if (!response.ok) {
-      throw createError('Weather forecast service unavailable', 503);
-    }
-
-    const data = await response.json();
+    const encodedTimezone = encodeURIComponent(timezone);
+    const path = `/v1/forecast?latitude=${latitude}&longitude=${longitude}&start_date=${startDateStr}&end_date=${endDateStr}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max&temperature_unit=celsius&wind_speed_unit=kmh&timezone=${encodedTimezone}`;
+    
+    const data = await httpsGet(FORECAST_API, path);
 
     if (!data.daily || !data.daily.time) {
+      console.error('[FORECAST] Invalid data:', data);
       throw createError('Invalid forecast data received', 502);
     }
 
@@ -121,9 +161,11 @@ const getWeatherForecast = async (latitude, longitude, startDate, endDate, timez
       };
     });
 
+    console.log('[FORECAST] Got', forecast.length, 'days of forecast');
     return forecast;
   } catch (error) {
     if (error.statusCode) throw error;
+    console.error('[FORECAST] Error:', error.message);
     throw createError('Unable to fetch weather forecast. Please try again later.', 503);
   }
 };
@@ -132,11 +174,13 @@ const getWeatherForecast = async (latitude, longitude, startDate, endDate, timez
  * Get complete weather data for a trip
  * Combines geocoding and forecast
  * @param {string} destination
- * @param {Date} startDate
- * @param {Date} endDate
+ * @param {Date|string} startDate
+ * @param {Date|string} endDate
  * @returns {Promise} - Complete weather object with location and forecast
  */
 const getWeatherForTrip = async (destination, startDate, endDate) => {
+  console.log('[WEATHER_SERVICE] Starting weather fetch for:', destination);
+  
   try {
     // Step 1: Geocode destination
     const locationData = await geocodeDestination(destination);
@@ -151,7 +195,7 @@ const getWeatherForTrip = async (destination, startDate, endDate) => {
     );
 
     // Step 3: Return combined weather data
-    return {
+    const weatherData = {
       location: locationData.name,
       country: locationData.country,
       admin1: locationData.admin1,
@@ -160,7 +204,11 @@ const getWeatherForTrip = async (destination, startDate, endDate) => {
       timezone: locationData.timezone,
       forecast,
     };
+    
+    console.log('[WEATHER_SERVICE] Weather fetch complete!');
+    return weatherData;
   } catch (error) {
+    console.error('[WEATHER_SERVICE] Weather fetch failed:', error.message);
     // Re-throw with status code
     throw error;
   }
